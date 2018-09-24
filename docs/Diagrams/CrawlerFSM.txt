@@ -1,0 +1,29 @@
+@startuml
+
+' FSM for Crawlers '
+left to right direction
+
+(*) --> "Crawl"
+"Crawl" --> [See/hear user && tail >= user] "Chase"
+"Crawl" --> [See/hear bug] "Bugging"  
+"Crawl" --> [See/hear user && tail < user] "Evade" 
+"Crawl" --> [Eaten] (*)
+
+"Bugging" --> [Bug ended && tail < user] "Evade" 
+"Bugging" --> [Bug ended && tail >= user] "Chase"
+"Bugging" --> [Bug ended && user timed out of memory] "Crawl" 
+"Bugging" --> [Eaten] (*)
+
+"Evade" --> [See/hear bug && tail < user] "Bugging"
+"Evade" --> [See/hear user && tail >= user] "Chase"
+"Evade" --> [User timed out of memory] "Crawl"
+"Evade" --> [Eaten] (*)
+
+"Chase" --> [Tail nibbled by user && tail < user] "Evade"
+"Chase" --> [User timed out of memory] "Crawl"
+"Chase" --> [Eaten] (*)
+' If crawler is in chase state then it must be longer than user '
+' then it has no worry in trying to get longer, so theres no need '
+' to transition to Bugging from Chase '
+
+@enduml
