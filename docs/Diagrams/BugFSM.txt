@@ -1,0 +1,13 @@
+@startuml
+
+' FSM for Crawlers '
+left to right direction
+
+(*) --> "Crawl"
+"Crawl" --> [See/hear predators] "Evade" 
+"Crawl" --> [Eaten or life timed out\nand crawled back into edge] (*)
+
+"Evade" --> [Predators timed out of memory] "Crawl"
+"Evade" --> [Eaten or life timed out\nand crawled back into edge] (*)
+
+@enduml
