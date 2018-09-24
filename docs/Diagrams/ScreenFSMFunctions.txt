@@ -1,0 +1,28 @@
+@startuml
+
+' FSM Function Diagram '
+
+(*) --> "_init()"
+"_init()" --> "splashInit()" 
+"splashInit()" --> "splashUpdate()"
+"splashUpdate()" --> "splashDraw()"
+"splashUpdate()" --> "menuInit()"
+"splashDraw()" --> "splashUpdate()"
+
+"menuInit()" --> "menuUpdate()"
+"menuUpdate()" --> "menuDraw()"
+"menuUpdate()" --> "playInit()"
+"menuDraw()" --> "menuUpdate()"
+
+"playInit()" --> "playUpdate()"
+"playUpdate()" --> "playDraw()"
+"playDraw()" --> "playUpdate()"
+"playUpdate()" --> "menuInit()"
+"playUpdate()" --> "endInit()"
+
+"endInit()" --> "endUpdate()"
+"endUpdate()" --> "endDraw()"
+"endDraw()" --> "endUpdate()"
+"endUpdate()"-->"splashInit()"
+
+@enduml

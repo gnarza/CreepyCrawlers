@@ -1,0 +1,16 @@
+@startuml
+
+' FSM for Screens '
+left to right direction
+
+(*) --> "Splash"
+"Splash" --> [Any] "Home" 
+
+"Home" --> [Play] "Playing"
+
+"Playing" --> [Lose/Quit] "Home"
+"Playing" --> [Beat 3rd Lvl] "End"
+
+"End" --> [Any] "Splash"
+
+@enduml
