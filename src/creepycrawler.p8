@@ -186,6 +186,10 @@ function update_actors()
      a.x=flr((a.x+4)/8)*8
      a.y=flr((a.y+4)/8)*8
     end
+
+    --screen wrapping
+    if(a.x>centerX*2-6) a.x=0
+    if(a.x<-4) a.x=centerX*2-6
   end
 
   cam_player()
