@@ -16,10 +16,10 @@ coming soon...:wrench:
 Natalie Garza
 
 ## Acknowledgments :beetle:
-*[Funbrain: Creepy Crawlers](https://www.funbrain.com/content/js_games/creepy_crawlers/)
-*[Scotaire: Smiley Snakey](https://www.lexaloffle.com/bbs/?tid=29609)
-*[UrbanMonk: Pico-Man](https://www.lexaloffle.com/bbs/?tid=2098)
-*[Scathe: Simple Collision Function](https://www.lexaloffle.com/bbs/?tid=3116)
-*[Bob Nystrom: Game Programming Patterns](http://gameprogrammingpatterns.com)
-*[SectorDub: Pico 8 Fanzine 1-4](https://pico8fanzine.bigcartel.com/)
-*[Jamey Pittman: The Pac-Man Dossier](http://www.gamasutra.com/view/feature/132330/the_pacman_dossier.php?page=1)
+* [Funbrain: Creepy Crawlers](https://www.funbrain.com/content/js_games/creepy_crawlers/)
+* [Scotaire: Smiley Snakey](https://www.lexaloffle.com/bbs/?tid=29609)
+* [UrbanMonk: Pico-Man](https://www.lexaloffle.com/bbs/?tid=2098)
+* [Scathe: Simple Collision Function](https://www.lexaloffle.com/bbs/?tid=3116)
+* [Bob Nystrom: Game Programming Patterns](http://gameprogrammingpatterns.com)
+* [SectorDub: Pico 8 Fanzine 1-4](https://pico8fanzine.bigcartel.com/)
+* [Jamey Pittman: The Pac-Man Dossier](http://www.gamasutra.com/view/feature/132330/the_pacman_dossier.php?page=1)
