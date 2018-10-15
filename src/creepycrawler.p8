@@ -96,11 +96,15 @@ function play_init()
  cam.toY=0
 
  actors={}
+-- timer
+ t=0
 
  pl=make_crawler(112,152)
  pl.sprite=32
+
  -- start by going right
  change_dir(pl,-1,0)
+ tail_node(pl,pl.x,pl.y,33)
 
 end
 
@@ -136,8 +140,24 @@ function make_crawler(x,y)
   -- animation
 	c.sprite=16
 
+  -- body
+  c.length=0
+  c.maxLength=10
+  c.tail={}
+
   add(actors,c)
 	return c
+end
+
+function tail_node(a,x,y,sp)
+  local t={}
+  t.x=x
+  t.y=y
+  t.node=a.length+1
+  t.sprite=sp or 32
+
+  add(a.tail,t)
+  a.length+=1
 end
 
 --
@@ -176,20 +196,38 @@ function update_actors()
     change_dir(pl,0,1)
 	end
 
+  t+=1
   for a in all(actors) do
     -- if not colliding update x and y accordingly
     if(coll(a)==false)then
+      if(t==8) then
+        -- old head coordinates become first tail node
+        tail_node(a,a.x,a.y,a.tail[1].sprite)
+        -- delete position of last tail node
+        del(a.tail,a.tail[1])
+        t=0
+      end
       a.x+=a.dx*a.speed
       a.y+=a.dy*a.speed
-    -- if colliding snap to grid
+      -- if colliding snap to grid
     else
+      if(t==8) then
+        -- old head coordinates become first tail node
+        tail_node(a,a.x,a.y,a.tail[1].sprite)
+        -- delete position of last tail node
+        del(a.tail,a.tail[1])
+        t=0
+      end
      a.x=flr((a.x+4)/8)*8
      a.y=flr((a.y+4)/8)*8
     end
-
     --screen wrapping
-    if(a.x>centerX*2-6) a.x=0
-    if(a.x<-4) a.x=centerX*2-6
+    if(a.x>centerX*2-6)then
+      a.x=0
+    end
+    if(a.x<-4)then
+      a.x=centerX*2-6
+    end
   end
 
   cam_player()
@@ -235,9 +273,17 @@ end
 --
 
 function draw_actor(actor)
+  -- draw tail
+  for t in all(actor.tail) do
+   sx=(t.x*8)/8
+   sy=(t.y*8)/8
+   spr(t.sprite,sx,sy)
+  end
+
+ -- draw head
  local sx=(actor.x*8)/8
  local sy=(actor.y*8)/8
- spr(actor.sprite, sx, sy)
+ spr(actor.sprite,sx,sy)
 end
 
 -->8
