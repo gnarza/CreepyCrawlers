@@ -1,4 +1,4 @@
-<center># :skull::bug: Creepy Crawlers :bug::skull:</center>
+# :skull::bug: Creepy Crawlers :bug::skull:
 coming soon...:wrench:
 
 ## Getting Started :floppy_disk:
