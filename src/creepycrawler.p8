@@ -80,7 +80,7 @@ end
 -- enemybody:4
 -- playerhead:5
 -- playerbody:6
--- bug:7
+
 
 function play_init()
  update=play_update
@@ -95,7 +95,9 @@ function play_init()
  cam.toX=0
  cam.toY=0
 
- actors={}
+ crawlers={}
+ bugs={}
+
 -- timer
  t=0
 
@@ -104,8 +106,10 @@ function play_init()
 
  -- start by going right
  change_dir(pl,-1,0)
- tail_node(pl,pl.x,pl.y,33)
 
+ -- for development purposes
+ -- delete later
+ make_bug(112,128)
 end
 
 function play_update()
@@ -113,20 +117,33 @@ function play_update()
 	buttpress(xbutt,togglesound)
 
   update_game()
-	update_actors()
+	update_crawlers()
 end
 
 function play_draw()
 	cls()
 	map(0,0,0,0,28,31)
 
-	draw_actor(pl)
-  print(coll(pl,pl.dx,pl.dy),pl.x-16,pl.y)
+	draw_crawlers()
+  draw_bugs()
+  print(pl.length,pl.x-16,pl.y)
   print(pl.x, pl.x-16,pl.y+8)
   print(pl.y, pl.x-16,pl.y+16)
 end
 
 --
+
+function make_bug(x,y)
+  local b={}
+  b.x=x
+  b.y=y
+  b.speed=1
+  b.dx=0
+  b.dy=0
+  b.sprite=34
+
+  add(bugs,b)
+end
 
 function make_crawler(x,y)
 	local c={}
@@ -145,7 +162,7 @@ function make_crawler(x,y)
   c.maxLength=10
   c.tail={}
 
-  add(actors,c)
+  add(crawlers,c)
 	return c
 end
 
@@ -154,10 +171,9 @@ function tail_node(a,x,y,sp)
   t.x=x
   t.y=y
   t.node=a.length+1
-  t.sprite=sp or 32
+  t.sprite=sp or 33
 
   add(a.tail,t)
-  a.length+=1
 end
 
 --
@@ -181,7 +197,7 @@ function update_game()
   camera(cam.x-63,cam.y-63)
 end
 
-function update_actors()
+function update_crawlers()
   -- left
 	if(btn(0)) then
 		change_dir(pl,-1,0)
@@ -197,10 +213,27 @@ function update_actors()
 	end
 
   t+=1
-  for a in all(actors) do
-    -- if not colliding update x and y accordingly
-    if(coll(a)==false)then
-      if(t==8) then
+  for a in all(crawlers) do
+
+    --bug collision and +1 tail node of same sprite
+    for b in all(bugs) do
+      if(bugColl(a,b))then
+        -- add a node to beginning identical
+        local newTail={}
+        add(newTail,tail_node(a,a.x,a.y))
+        -- add the rest so that the newTail goes:
+        -- {head,first,second,...,last}
+        for q in all(a.tail) do
+          add(newTail,q)
+        end
+        a.tail=newTail
+        a.length+=1
+      end
+    end
+
+    -- if not colliding with wall update x and y accordingly
+    if(wallColl(a)==false)then
+      if(t>=8 and a.length!=0) then
         -- old head coordinates become first tail node
         tail_node(a,a.x,a.y,a.tail[1].sprite)
         -- delete position of last tail node
@@ -209,9 +242,9 @@ function update_actors()
       end
       a.x+=a.dx*a.speed
       a.y+=a.dy*a.speed
-      -- if colliding snap to grid
+    -- if colliding with wall snap to grid
     else
-      if(t==8) then
+      if(t>=8 and a.length!=0) then
         -- old head coordinates become first tail node
         tail_node(a,a.x,a.y,a.tail[1].sprite)
         -- delete position of last tail node
@@ -221,6 +254,7 @@ function update_actors()
      a.x=flr((a.x+4)/8)*8
      a.y=flr((a.y+4)/8)*8
     end
+
     --screen wrapping
     if(a.x>centerX*2-6)then
       a.x=0
@@ -238,8 +272,8 @@ function cam_player()
   cam.toY=centerY-(centerY-pl.y)*.9
 end
 
--- return true if colliding
-function coll(a,dx,dy,xs,ys)
+-- return true if colliding with wall
+function wallColl(a,dx,dy,xs,ys)
   dx=dx or a.dx
   dy=dy or a.dy
 
@@ -249,17 +283,27 @@ function coll(a,dx,dy,xs,ys)
   if(dy!=0) x=flr((x+4)/8)*8
   if(dx!=0) y=flr((y+4)/8)*8
 
-  -- get tile ahead of actor
+  -- get tile ahead of crawler
   local xtile=flr((x+min(dx,0))/8)+max(dx,0)
   local ytile=flr((y+min(dy,0))/8)+max(dy,0)
 
-  return(fget(mget(xtile,ytile),0))
+  return(fget(mget(xtile,ytile), 0))
 end
 
--- update actor dx and dy if not colliding
+--return true if colliding with bug
+function bugColl(a,b)
+  local axTile=flr(a.x)
+  local ayTile=flr(a.y)
+  local bxTile=flr(b.x)
+  local byTile=flr(b.y)
+
+  if(axTile==bxTile and ayTile==byTile) return true
+end
+
+-- update crawler dx and dy if possible
 function change_dir(a,dx,dy)
- if(coll(a,dx,dy)==false and
-    coll(a,dx,dy,a.x*2,a.y*2)==false) then
+ if(wallColl(a,dx,dy)==false and
+    wallColl(a,dx,dy,a.x*2,a.y*2)==false) then
    a.dx=dx or 0
    a.dy=dy or 0
   if(a.dy!=0) then
@@ -272,18 +316,33 @@ end
 
 --
 
-function draw_actor(actor)
-  -- draw tail
-  for t in all(actor.tail) do
-   sx=(t.x*8)/8
-   sy=(t.y*8)/8
-   spr(t.sprite,sx,sy)
-  end
+function draw_crawlers()
+  local sx=0
+  local sy=0
 
- -- draw head
- local sx=(actor.x*8)/8
- local sy=(actor.y*8)/8
- spr(actor.sprite,sx,sy)
+  for crawler in all(crawlers) do
+    -- draw tail
+    for node in all(crawler.tail) do
+      sx=(node.x*8)/8
+      sy=(node.y*8)/8
+      spr(node.sprite,sx,sy)
+    end
+    -- draw head
+    sx=(crawler.x*8)/8
+    sy=(crawler.y*8)/8
+    spr(crawler.sprite,sx,sy)
+  end
+end
+
+function draw_bugs()
+  local sx=0
+  local sy=0
+
+  for bug in all(bugs) do
+    sx=(bug.x*8)/8
+    sy=(bug.y*8)/8
+    spr(bug.sprite,sx,sy)
+  end
 end
 
 -->8
@@ -327,16 +386,16 @@ __gfx__
 3333333333333333333333333333333333333333333333330bb3333333333bb0333333b00b3333330b333333333333b0333333b0333333333333333333333333
 3333333b3333333333333333b3333333bbbbbbbbbbbbbbbb00bbbbbbbbbbbb00b33333b00b33333b0b333333b33333b0333333b033333333b33333333333333b
 333333b033333333333333330b333333000000000000000000000000000000000b3333b00b3333b00b3333330b3333b0333333b0333333330b333333333333b0
-00bbbb0000eeee000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0bbbb7b00eeeeee00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-b3bb717beeeeeeee0007700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-373bb7bbeeeeeeee0088880000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-b3bbbbbbeeeeeeee0087880000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-bbbbabbbeeeeeeee0008800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0bba2ab00eeeeee00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00bbab0000eeee000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+005580000055d5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0d5600000d5555500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+d5558000d55655550007700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+d655000d65555d5d0088880000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+ddd55d55dd55555d0087880000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+dd65555ddd655d6d0008800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0ddd56d00dddddd00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00dddd0000dd6d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __gff__
-0001010101010101010101010101010101010101010101010101010101010101000000000000000000000000010101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0001010101010101010101010101010101010101010101010101010101010101204080000000000000000000010101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __map__
 1905050505050505050505051e1d1d1f05050505050505050505051800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
