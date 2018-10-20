@@ -89,6 +89,29 @@ function play_init()
  centerX=108
  centerY=120
 
+--left,right,up,down
+ ways={}
+ left={-1,0}
+ right={1,0}
+ up={0,-1}
+ down={0,1}
+ add(ways,left)
+ add(ways,right)
+ add(ways,up)
+ add(ways,down)
+ newWay=ways[1]
+
+-- these are all the tiles where actors have to make_bug
+-- a decision on where to turn {x,y}
+ forks={{6,1},{21,1},{11,3},{16,3},{3,7},{24,7},{11,6},
+  {15,6},{12,9},{15,9},{9,11},{12,11},{15,11},{18,11},
+  {1,12},{4,12},{7,12},{20,12},{23,12},{26,12},{23,18},
+  {20,16},{17,16},{15,16},{12,16},{10,16},{7,16},{4,18},
+  {7,18},{4,18},{7,19},{10,19},{11,19},{16,19},{17,19},
+  {20,19},{4,21},{23,21},{16,22},{11,22},{23,24},{18,24},
+  {9,24},{4,24},{1,26},{4,26},{23,26},{26,26},{18,27},
+  {12,27},{9,27},{4,29},{23,29},{20,18},{15,24},{12,24},{15,27}}
+
  cam={}
  cam.x=0
  cam.y=0
@@ -110,6 +133,7 @@ function play_init()
  -- for development purposes
  -- delete later
  make_bug(112,128)
+ change_dir(bugs[1],-1,0)
 end
 
 function play_update()
@@ -118,6 +142,7 @@ function play_update()
 
   update_game()
 	update_crawlers()
+  update_bugs()
 end
 
 function play_draw()
@@ -126,21 +151,28 @@ function play_draw()
 
 	draw_crawlers()
   draw_bugs()
-  print(pl.length,pl.x-16,pl.y)
+  print(flr(rnd(4)+1),pl.x-16,pl.y)
   print(pl.x, pl.x-16,pl.y+8)
   print(pl.y, pl.x-16,pl.y+16)
 end
 
---
+-- [[ Make Methods For Play State ]]
 
 function make_bug(x,y)
   local b={}
   b.x=x
   b.y=y
-  b.speed=1
+  b.speed=.8
   b.dx=0
   b.dy=0
   b.sprite=34
+  -- bug updated 30/sec
+  -- 20 secs default life
+  b.lifecyle=600
+  --states:
+  --1=crawl/wander
+  --2=evade
+  b.state=1
 
   add(bugs,b)
 end
@@ -176,7 +208,8 @@ function tail_node(a,x,y,sp)
   add(a.tail,t)
 end
 
---
+-- [[ Update Methods For Play State ]]
+
 function update_game()
   if(cam.toX<64) then
     cam.toX=64
@@ -195,6 +228,7 @@ function update_game()
   cam.y+=(cam.toY-cam.y)*0.14
 
   camera(cam.x-63,cam.y-63)
+
 end
 
 function update_crawlers()
@@ -255,7 +289,7 @@ function update_crawlers()
      a.y=flr((a.y+4)/8)*8
     end
 
-    --screen wrapping
+    -- screen wrapping
     if(a.x>centerX*2-6)then
       a.x=0
     end
@@ -267,6 +301,48 @@ function update_crawlers()
   cam_player()
 end
 
+function update_bugs()
+-- needs path choosing mechanism...
+-- after path choosing implemented then
+-- needs an algorithm for each state of the bug
+-- then needs a spawning feature added.
+
+  for b in all(bugs) do
+
+    -- if not colliding with wall update x and y accordingly
+    if(wallColl(b)==false and atFork(b)==false)then
+      b.x+=b.dx*b.speed
+      b.y+=b.dy*b.speed
+    -- if colliding with wall or at a fork change_dir based on bug state
+    else
+     --b.x=flr((b.x+4)/8)*8
+     --b.y=flr((b.y+4)/8)*8
+      if(b.state==1) then -- crawl/wander
+        -- randomly choose a direction
+        while(wallColl(b)==true) do
+          newWay=ways[flr(rnd(4)+1)]
+          change_dir(b,newWay[1],newWay[2])
+        end
+        b.x+=b.dx*b.speed
+        b.y+=b.dy*b.speed
+      else -- state==2, evade
+
+      end
+    end
+
+    -- screen wrapping
+    if(b.x>centerX*2-6)then
+      b.x=0
+    end
+    if(b.x<-4)then
+      b.x=centerX*2-6
+    end
+  end
+end
+
+-- [[ Additional Methods For Play State ]]
+
+-- follow player around map
 function cam_player()
   cam.toX=centerX-(centerX-pl.x)*.9
   cam.toY=centerY-(centerY-pl.y)*.9
@@ -290,7 +366,18 @@ function wallColl(a,dx,dy,xs,ys)
   return(fget(mget(xtile,ytile), 0))
 end
 
---return true if colliding with bug
+function atFork(b)
+  local bugXTile=flr(b.x)
+  local bugYTile=flr(b.y)
+
+  for f in all(fork) do
+    if(bugXTile==f[1] and bugYTile==f[2]) return true
+  end
+
+  return false
+end
+
+-- return true if crawler colliding with bug
 function bugColl(a,b)
   local axTile=flr(a.x)
   local ayTile=flr(a.y)
@@ -314,7 +401,7 @@ function change_dir(a,dx,dy)
  end
 end
 
---
+-- [[ Draw Methods For Play State ]]
 
 function draw_crawlers()
   local sx=0
