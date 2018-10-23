@@ -142,13 +142,13 @@ function make_bug(x,y)
   local b={}
   b.x=x
   b.y=y
-  b.speed=.8
+  b.speed=1.2
   b.dx=0
   b.dy=0
   b.sprite=34
   -- bug updated 30/sec
   -- 20 secs default life
-  b.lifecyle=600
+  b.lifecyle=1200
   --states:
   --1=crawl/wander
   --2=evade
@@ -244,6 +244,11 @@ function update_crawlers()
         a.tail=newTail
         a.length+=1
         del(bugs,b)
+      end
+      if(dist(a.x,a.y,b.x,b.y)<64)then
+        b.state=2
+      else
+        b.state=1
       end
     end
 
