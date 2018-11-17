@@ -75,12 +75,11 @@ end
 -- flags
 -- wall:0
 -- spawn spot:1
--- tunnel:2
 -- enemyhead:3
 -- enemybody:4
 -- playerhead:5
 -- playerbody:6
-
+-- turning point:7
 
 function play_init()
  update=play_update
@@ -89,31 +88,54 @@ function play_init()
  centerX=108
  centerY=120
 
- spawns={{104,144}}
-
  cam={}
  cam.x=0
  cam.y=0
  cam.toX=0
  cam.toY=0
 
+ opp = {0,0}
+
  crawlers={}
  bugs={}
+ levels={}
 
--- timer
+ spwn1=make_spawning_manager()
+ make_level(spwn1,1)
+
+ spwn2=make_spawning_manager()
+ spwn2.bugFreq={600,900,1200,1500,1800,2700,0,0,0}
+ spwn2.bugLife={600,600,450,300,300,300,0,0,0}
+ spwn2.crawlerFreq={300,300,300,300,300,150,150,150,150}
+ spwn2.crawlerLen={2,3,4,5,7,8,9,10,11}
+ spwn2.crawlerSpawned={2,3,3,4,4,4,5,5,5}
+ spwn2.e={0.9,0.7,0.5,0.3,0.1,0,0,0,0}
+ spwn2.m={0.1,0.3,0.5,0.7,0.9,0.9,0.7,0.5,0.3}
+ spwn2.h={0,0,0,0,0,0.1,0.3,0.5,0.7}
+ make_level(spwn2,2)
+
+ spwn3=make_spawning_manager()
+ spwn3.bugFreq={600,1200,1800,2700,3600,0,0,0,0}
+ spwn3.bugLife={450,450,300,300,300,0,0,0,0}
+ spwn3.crawlerFreq={300,300,300,300,300,150,150,150,150}
+ spwn3.crawlerLen={2,3,5,6,7,8,10,11,12}
+ spwn3.crawlerSpawned={3,3,4,4,4,5,5,5,5}
+ spwn3.e={0.3,0.2,0.1,0,0,0,0,0,0}
+ spwn3.m={0.7,0.8,0.7,0.5,0.3,0.1,0,0,0}
+ spwn3.h={0,0,0.2,0.5,0.7,0.9,1,1,1}
+ make_level(spwn3,3)
+
+
+-- timer for tail draw and spawning
  t=0
+ s=0
 
- pl=make_crawler(112,152)
+ pl=make_crawler(112,192)
  pl.sprite=32
-
+ pl.pl=true
  -- start by going right
- change_dir(pl,-1,0)
+ change_dir(pl,1,0)
 
- -- for development purposes
- -- delete later
- make_bug(112,128)
- change_dir(bugs[1], 1,0)
- bugs[1].state=2
 end
 
 function play_update()
@@ -131,18 +153,48 @@ function play_draw()
 
 	draw_crawlers()
   draw_bugs()
-  -- print(bugs[1].lifecyle,pl.x-16,pl.y)
+  print(opp[1],pl.x-16,pl.y+32)
+  print(opp[2],pl.x-16,pl.y+24)
   print(pl.x, pl.x-16,pl.y+8)
   print(pl.y, pl.x-16,pl.y+16)
 end
 
 -- [[ Make Methods For Play State ]]
+function make_level(spwn,level)
+  local l={}
+  l.level=level or 1
+  l.spwnMgr=spwn
+
+  add(l,levels)
+end
+
+function make_spawning_manager()
+  local s={}
+  s.bugFreq={300,450,600,750,900,1050,0,0,0}
+  s.bugLife={600,600,600,600,450,300}
+  -- no more than this amount of bugs can exist on the map at a time
+  s.bugSpawned={1,1,1,1,1,1,0,0,0}
+
+  s.crawlerFreq={300,300,300,300,300,300,300,300,150,150}
+  s.crawlerLen={1,2,3,4,5,6,7,8,9,10}
+  -- no more than this amount of crawlers can exist on the map at a time
+  s.crawlerSpawned={1,2,2,3,3,3,4,4,4}
+
+  s.spawns={{104,144}}
+  s.tunnels={{0,144},{216,144}}
+
+  s.e={1,0.9,0.8,0.7,0.6,0.5,0.2,0.1,0}
+  s.m={0,0.1,0.2,0.3,0.4,0.5,0.8,0.9,1}
+  s.h={0,0,0,0,0,0,0,0,0}
+
+  return s
+end
 
 function make_bug(x,y)
   local b={}
   b.x=x
   b.y=y
-  b.speed=1.2
+  b.speed=1.1
   b.dx=0
   b.dy=0
   b.sprite=34
@@ -152,7 +204,7 @@ function make_bug(x,y)
   --states:
   --1=crawl/wander
   --2=evade
-  --3=terminate
+  --3=go back to spawning point
   b.state=1
 
   add(bugs,b)
@@ -160,6 +212,8 @@ end
 
 function make_crawler(x,y)
 	local c={}
+  -- is player?
+  c.pl=false
 	-- position
 	c.x=x
 	c.y=y
@@ -167,13 +221,24 @@ function make_crawler(x,y)
 	c.speed=1
 	c.dx=0
   c.dy=0
+  c.rest=0
   -- animation
-	c.sprite=16
+	c.sprite=48
 
   -- body
   c.length=0
   c.maxLength=10
   c.tail={}
+
+  -- states:
+  --1=crawl/wander
+  --2=evade
+  --3=chase
+  --4=bugging
+  c.state=1
+
+  c.bugx=0
+  c.bugy=0
 
   add(crawlers,c)
 	return c
@@ -207,7 +272,6 @@ function update_game()
     cam.toY=190
   end
   cam.y+=(cam.toY-cam.y)*0.14
-
   camera(cam.x-63,cam.y-63)
 
 end
@@ -230,11 +294,14 @@ function update_crawlers()
   t+=1
   for a in all(crawlers) do
 
-    --bug collision and +1 tail node of same sprite
+    -- player collision code
+
     for b in all(bugs) do
+      -- if the bug gets eaten +1 tail node of the same sprite
       if(bugColl(a,b))then
         -- add a node to beginning identical
         local newTail={}
+        -- if(a.pl==true) tspr =
         add(newTail,tail_node(a,a.x,a.y))
         -- add the rest so that the newTail goes:
         -- {head,first,second,...,last}
@@ -243,16 +310,84 @@ function update_crawlers()
         end
         a.tail=newTail
         a.length+=1
+        a.speed-=.1
+
+        -- check all the crawlers to make sure you delete and replace the
+        -- coords for bugx and bugy
+        for c in all(crawlers) do
+          if(c.bugx==b.x and c.bugy==b.y)then
+            c.state=1
+            c.bugx=0
+            c.bugy=0
+          end
+        end
+
         del(bugs,b)
-      end
-      if(dist(a.x,a.y,b.x,b.y)<64)then
-        b.state=2
-      else
-        b.state=1
       end
     end
 
-    -- if not colliding with wall update x and y accordingly
+    -- this is to make sure crawlers don't have a bug set as target when
+    -- their lifecyle is over
+    if(#bugs==0)then
+      a.bugx=0
+      a.bugy=0
+      if(a.state==4)then
+        a.state=1
+      end
+    end
+
+    -- change the state of opponent crawlers
+    if(a.pl==false)then
+      -- chase if tail longer than player
+      if(a.length >= pl.length)then
+        a.state=3
+        a.rest+=1
+      -- evade if player close by and tail shorter
+      elseif(dist(pl.x,a.x,pl.y,a.y)<80 and a.length < pl.length)then
+        a.state=2
+      --rest if its been in chase mode for > one minute
+      elseif(a.rest>1800 and a.state==3)then
+        if(a.rest>3150)then
+          r=0
+        end
+        a.state=1
+      end
+
+      -- bugging state if bug is close by to crawler and tail length meets
+      -- shorter than criteria
+      for e in all(bugs) do
+        if(dist(e.x,a.x,e.y,a.y)<80 and a.length < pl.length)then
+          a.state=4
+          a.bugx=e.x
+          a.bugy=e.y
+        end
+      end
+    end
+
+    -- depending on the state of the opponent crawlers change the direction when
+    -- colliding with wall or at a fork
+    if(a.pl==false and (atFork(a)==true or wallColl(a)==true))then
+      --1=crawl/wander
+      if(a.state==1)then
+        rnd_mv(a)
+
+      --2=evade
+      elseif(a.state==2) then
+        opp=opp_quad(pl)
+        trg_mv(a,opp[1],opp[2])
+
+      --3=chase
+      elseif(a.state==3)then
+        trg_mv(a,pl.x,pl.y)
+
+      --4=bugging
+      elseif(a.state==4)then
+        trg_mv(a,a.bugx,a.bugy)
+
+      end
+    end
+
+    -- if not colliding with wall update x and y accordingly)
     if(wallColl(a)==false)then
       if(t>=8 and a.length!=0) then
         -- old head coordinates become first tail node
@@ -290,9 +425,10 @@ end
 
 function update_bugs()
 -- needs an algorithm for each state of the bug
--- then needs a spawning feature added.
+-- then needs a spawning manager added.
 
   for b in all(bugs) do
+    -- if the bug lifecyle is up go back to a spawning point and die
     if(b.lifecyle==0) then
       b.state=3
       if(atSpawn(b))then
@@ -303,12 +439,26 @@ function update_bugs()
       b.lifecyle-=1
     end
 
+    -- change the state of the bug depending on how far away the player is
+    -- also the current state must not be terminate
+    if(dist(pl.x,b.x,pl.y,b.y)<80 and b.state!=3)then
+      b.state=2
+    else
+      b.state=1
+    end
+
+    -- move according to the state the bug is in
     if(atFork(b) or wallColl(b))then
+      --1=crawl/wander
       if(b.state==1)then
         rnd_mv(b)
+
+      --2=evade
       elseif(b.state==2)then
-        local opp=opp_quad(pl)
+        opp=opp_quad(pl)
         trg_mv(b,opp[1],opp[2])
+
+      --3=terminate/go back to spawning point
       elseif(b.state==3)then
         trg_mv(b,spawns[1][1],spawns[1][2])
       end
@@ -586,16 +736,24 @@ __gfx__
 3333333333333333333333333333333333333333333333330bb3333333333bb0333333b00b3333330b333333333333b0333333b0333333333333333333333333
 3333333b3333333333333333b3333333bbbbbbbbbbbbbbbb00bbbbbbbbbbbb00b33333b00b33333b0b333333b33333b0333333b033333333b33333333333333b
 333333b033333333333333330b333333000000000000000000000000000000000b3333b00b3333b00b3333330b3333b0333333b0333333330b333333333333b0
-005555000055d50000000000aaaaaaaa055555000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0d5775500d55555000000000a000000a557775500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-d57c1755d556555500077000a000000a570007550000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-d771177d65555d5d00888800a000000a705550750000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-d0777705dd55555d00878800a000000a055750550000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-dd07705ddd655d6d00088000a000000a057075570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0dd006d00dddddd000000000a000000a075555700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00dddd0000dd6d0000000000aaaaaaaa007777000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+005555000055d5000000000011111111055555000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0d5775500d5555500000000010000001557775500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+d57c1755d55655550007700010000001570007550000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+d771177d65555d5d0088880010000001705550750000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+d0777705dd55555d0087880010000001055750550000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+dd07705ddd655d6d0008800010000001057075570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0dd006d00dddddd00000000010000001075555700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00dddd0000dd6d000000000011111111007777000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+009999000099a9000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0a9779900a9999900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+a97b3799a99b99990000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+a773377ab9999a9a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+a0777709aa99999a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+aa07709aaab99aba0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0aa00aa00aaaaaa00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00aaaa0000aaba000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __gff__
-0001010101010101010101010101010101010101010101010101010101010101204000800200000000000000010101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0001010101010101010101010101010101010101010101010101010101010101204000800200000000000000010101012040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __map__
 1905050505050505050505051e1d1d1f05050505050505050505051800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
