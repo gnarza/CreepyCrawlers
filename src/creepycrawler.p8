@@ -132,7 +132,6 @@ function play_init()
  t=0
 
  pl=make_crawler(112,192)
- pl.sprite=32
  pl.pl=true
  -- start by going right
  change_dir(pl,1,0)
@@ -154,8 +153,10 @@ function play_draw()
 
 	draw_crawlers()
   draw_bugs()
-  print(rndSpawns,pl.x-16,pl.y+32)
-  print(opp[2],pl.x-16,pl.y+24)
+  if(#crawlers>1)then
+    print(pl.length,pl.x-16,pl.y+32)
+    print(lvl.sc,pl.x-16,pl.y+24)
+  end
   print(pl.x, pl.x-16,pl.y+8)
   print(pl.y, pl.x-16,pl.y+16)
 end
@@ -228,12 +229,15 @@ function make_crawler(x,y)
   c.dy=0
   c.rest=0
   -- animation
-	c.sprite=48
+	c.sprite=32
+  c.timer=0
+  c.timrCap=8
 
   -- body
+  c.tail={}
   c.length=0
   c.maxLength=10
-  c.tail={}
+  c.tailSpr=33
 
   -- states:
   --1=crawl/wander
@@ -249,6 +253,36 @@ function make_crawler(x,y)
 	return c
 end
 
+function make_e(x,y)
+  myE = make_crawler(x,y)
+  myE.speed=.5
+  myE.timrCap=12
+  -- put e sprite...
+  myE.sprite=48
+  myE.tailSpr=49
+  myE.type="easy"
+end
+
+function make_m(x,y)
+  myM = make_crawler(x,y)
+  myM.speed=.5
+  myM.timrCap=12
+  -- put e sprite...
+  myM.sprite=48
+  myM.tailSpr=49
+  myM.type="medium"
+end
+
+function make_h(x,y)
+  myH = make_crawler(x,y)
+  myH.speed=1.02
+  myH.timrCap=7
+  -- put e sprite...
+  myH.sprite=48
+  myH.tailSpr=49
+  myH.type="hard"
+end
+
 function tail_node(a,x,y,sp)
   local t={}
   t.x=x
@@ -256,7 +290,8 @@ function tail_node(a,x,y,sp)
   t.node=a.length+1
   t.sprite=sp or 33
 
-  add(a.tail,t)
+  -- add(a.tail,t)
+  return t
 end
 
 -- [[ Update Methods For Play State ]]
@@ -279,17 +314,46 @@ function update_game()
   cam.y+=(cam.toY-cam.y)*0.14
   camera(cam.x-63,cam.y-63)
 
-  -- code for spawning bugs and crawelers
+  -- code for spawning bugs and crawlers
   lvl=levels[currentLvl]
   spawner=lvl.spwnMgr
-  -- lvl.sc+=1
-  lvl.sb+=1
+  lvl.sc+=1
+  if(#bugs==0) then
+    lvl.sb+=1
+  end
   -- make a new crawler if reached frequency and meet other criteria
-  -- if(spawner.crawlerFreq[pl.length] =< lvl.sc and spawner.crawlerSpawned[pl.length] > (#crawlers-1))then
-  --   -- lvl.sc=0
-  --   -- type=flr(rnd(1 * 10)) / 10
-  --   -- make_crawler
-  -- end
+  if((spawner.crawlerFreq[pl.length+1] <= lvl.sc) and (spawner.crawlerSpawned[pl.length+1] > (#crawlers-1)))then
+    lvl.sc=0
+    prob=flr(rnd(1 * 10)) / 10
+    -- make_crawler
+    tunnels=spawner.tunnels
+    rndTunn = flr(rnd(#tunnels))+1
+    if((spawner.e[pl.length+1]+spawner.m[pl.length+1])==1)then
+      if(prob <= spawner.e[pl.length+1])then
+        make_e(tunnels[rndTunn][1], tunnels[rndTunn][2])
+      else
+        make_m(tunnels[rndTunn][1], tunnels[rndTunn][2])
+      end
+    else
+      if(prob <= spawner.m[pl.length+1])then
+        make_m(tunnels[rndTunn][1], tunnels[rndTunn][2])
+      else
+        make_h(tunnels[rndTunn][1], tunnels[rndTunn][2])
+      end
+    end
+
+    for i=1, spawner.crawlerLen[pl.length+1] do
+      add(crawlers[#crawlers].tail,tail_node(crawlers[#crawlers],crawlers[#crawlers].x,crawlers[#crawlers].y,crawlers[#crawlers].tailSpr))
+      crawlers[#crawlers].length+=1
+    end
+
+    if(tunnels[rndTunn][1]==0)then
+      crawlers[#crawlers].dx=1
+    else
+      crawlers[#crawlers].dx=-1
+    end
+  end
+  -- make a new bug if reached frequency and meet other criteria
   if((spawner.bugFreq[pl.length+1]<=lvl.sb) and (spawner.bugSpawned[pl.length+1]>#bugs))then
     lvl.sb=0
     spwnPoints=spawner.spawns
@@ -317,42 +381,8 @@ function update_crawlers()
     change_dir(pl,0,1)
 	end
 
-  t+=1
   for a in all(crawlers) do
-
-    -- player collision code
-
-    for b in all(bugs) do
-      -- if the bug gets eaten +1 tail node of the same sprite
-      if(bugColl(a,b))then
-        -- add a node to beginning identical
-        local newTail={}
-        -- if(a.pl==true) tspr =
-        add(newTail,tail_node(a,a.x,a.y))
-        -- add the rest so that the newTail goes:
-        -- {head,first,second,...,last}
-        for q in all(a.tail) do
-          add(newTail,q)
-        end
-        a.tail=newTail
-        a.length+=1
-        if(a.pl)then
-          pl.speed-=.01
-        end
-
-        -- check all the crawlers to make sure you delete and replace the
-        -- coords for bugx and bugy
-        for c in all(crawlers) do
-          if(c.bugx==b.x and c.bugy==b.y)then
-            c.state=1
-            c.bugx=0
-            c.bugy=0
-          end
-        end
-
-        del(bugs,b)
-      end
-    end
+    a.timer+=1
 
     -- this is to make sure crawlers don't have a bug set as target when
     -- their lifecyle is over
@@ -364,16 +394,56 @@ function update_crawlers()
       end
     end
 
-    -- change the state of opponent crawlers
+    -- change the state of opponent crawlers if not colliding with player
     if(a.pl==false)then
+      -- if head collide and player is bigger than opponent
+      if(coll(a,pl) and pl.length > a.length)then
+        add(pl.tail,tail_node(pl,pl.x,pl.y,a.tailSpr))
+
+        pl.length+=1
+        pl.speed-=.01
+
+        del(crawlers,a)
+        break
+      end
+      -- you died start over sucker
+      if(coll(a,pl) and pl.length <= a.length)then
+        menu_init()
+      end
+      -- tail nibbled off opponent
+      eaten=false
+      for tl=1,(#a.tail) do
+        if(eaten)then
+          del(a.tail, a.tail[tl])
+          a.length-=1
+        elseif(coll(pl,a.tail[tl]))then
+          eaten=true
+          del(a.tail, a.tail[tl])
+          a.length-=1
+        end
+      end
+      -- tail nibbled off player
+      eaten=false
+      for tl=1,(#pl.tail) do
+        if(eaten)then
+          del(pl.tail, pl.tail[tl])
+          pl.length-=1
+        elseif(coll(pl.tail[tl],a))then
+          eaten=true
+          del(pl.tail, pl.tail[tl])
+          pl.length-=1
+        end
+      end
+
+
       -- chase if tail longer than player
       if(a.length >= pl.length)then
         a.state=3
         a.rest+=1
-      -- evade if player close by and tail shorter
+        -- evade if player close by and tail shorter
       elseif(dist(pl.x,a.x,pl.y,a.y)<80 and a.length < pl.length)then
         a.state=2
-      --rest if its been in chase mode for > one minute
+        --rest if its been in chase mode for > one minute
       elseif(a.rest>1800 and a.state==3)then
         if(a.rest>3150)then
           r=0
@@ -394,49 +464,70 @@ function update_crawlers()
 
     -- depending on the state of the opponent crawlers change the direction when
     -- colliding with wall or at a fork
+    -- CHANGE TRGMV DEPENDING ON TYPE OF CRAWLER
     if(a.pl==false and (atFork(a)==true or wallColl(a)==true))then
       --1=crawl/wander
       if(a.state==1)then
         rnd_mv(a)
 
-      --2=evade
+        --2=evade
       elseif(a.state==2) then
         opp=opp_quad(pl)
         trg_mv(a,opp[1],opp[2])
 
-      --3=chase
+        --3=chase
       elseif(a.state==3)then
         trg_mv(a,pl.x,pl.y)
 
-      --4=bugging
+        --4=bugging
       elseif(a.state==4)then
         trg_mv(a,a.bugx,a.bugy)
 
       end
     end
 
+    for b in all(bugs) do
+      -- if the bug gets eaten +1 tail node of the same sprite
+      if(coll(a,b))then
+        add(a.tail,tail_node(a,a.x,a.y,a.tailSpr))
+
+        a.length+=1
+        if(a.pl)then
+          pl.speed-=.01
+        end
+
+        -- check all the crawlers to make sure you delete and replace the
+        -- coords for bugx and bugy
+        for c in all(crawlers) do
+          if(c.bugx==b.x and c.bugy==b.y)then
+            c.state=1
+            c.bugx=0
+            c.bugy=0
+          end
+        end
+
+        del(bugs,b)
+      end
+    end
+
     -- if not colliding with wall update x and y accordingly)
     if(wallColl(a)==false)then
-      if(t>=8 and a.length!=0) then
-        -- old head coordinates become first tail node
-        tail_node(a,a.x,a.y,a.tail[1].sprite)
-        -- delete position of last tail node
-        del(a.tail,a.tail[1])
-        t=0
-      end
       a.x+=a.dx*a.speed
       a.y+=a.dy*a.speed
     -- if colliding with wall snap to grid
     else
-      if(t>=8 and a.length!=0) then
-        -- old head coordinates become first tail node
-        tail_node(a,a.x,a.y,a.tail[1].sprite)
-        -- delete position of last tail node
-        del(a.tail,a.tail[1])
-        t=0
-      end
      a.x=flr((a.x+4)/8)*8
      a.y=flr((a.y+4)/8)*8
+    end
+
+    if(a.timer>=a.timrCap and a.length!=0) then
+      local mvTail={}
+      add(mvTail,tail_node(a,a.x,a.y,a.tail[1].sprite))
+      for tl=1,(#a.tail-1) do
+        add(mvTail, tail_node(a,a.tail[tl].x, a.tail[tl].y,a.tail[tl+1].sprite))
+      end
+      a.tail=mvTail
+      a.timer=0
     end
 
     -- screen wrapping
@@ -452,9 +543,6 @@ function update_crawlers()
 end
 
 function update_bugs()
--- needs an algorithm for each state of the bug
--- then needs a spawning manager added.
-
   for b in all(bugs) do
     -- if the bug lifecyle is up go back to a spawning point and die
     if(b.lifecyle==0) then
@@ -670,8 +758,8 @@ function atSpawn(a)
   return(fget(mget(xtile,ytile), 1))
 end
 
--- return true if crawler colliding with bug
-function bugColl(a,b)
+-- return true if a collides with b
+function coll(a,b)
   local axTile=flr(a.x/8)
   local ayTile=flr(a.y/8)
   local bxTile=flr(b.x/8)
@@ -783,7 +871,7 @@ aa07709aaab99aba0000000000000000000000000000000000000000000000000000000000000000
 0aa00aa00aaaaaa00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00aaaa0000aaba000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __gff__
-0001010101010101010101010101010101010101010101010101010101010101204000800200000000000000010101012040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0001010101010101010101010101010101010101010101010101010101010101204000800300000000000000010101012040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __map__
 1905050505050505050505051e1d1d1f05050505050505050505051800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
