@@ -154,9 +154,9 @@ function play_draw()
 	draw_crawlers()
   draw_bugs()
   if(#crawlers>1)then
-    print(pl.length,pl.x-16,pl.y+32)
-    print(lvl.sc,pl.x-16,pl.y+24)
+    print(rndSpawns,pl.x-16,pl.y+24)
   end
+  print(pl.length,pl.x-16,pl.y+32)
   print(pl.x, pl.x-16,pl.y+8)
   print(pl.y, pl.x-16,pl.y+16)
 end
@@ -199,7 +199,7 @@ function make_bug(x,y)
   local b={}
   b.x=x
   b.y=y
-  b.speed=1.1
+  b.speed=.9
   b.dx=0
   b.dy=0
   b.sprite=34
@@ -220,6 +220,7 @@ function make_crawler(x,y)
 	local c={}
   -- is player?
   c.pl=false
+
 	-- position
 	c.x=x
 	c.y=y
@@ -227,7 +228,13 @@ function make_crawler(x,y)
 	c.speed=1
 	c.dx=0
   c.dy=0
+
   c.rest=0
+  -- Rest every 30 seconds from attack mode
+  c.restCap=900
+  -- rest for 10 seconds
+  c.restTot=300
+
   -- animation
 	c.sprite=32
   c.timer=0
@@ -255,8 +262,8 @@ end
 
 function make_e(x,y)
   myE = make_crawler(x,y)
-  myE.speed=.5
-  myE.timrCap=12
+  myE.speed=.6
+  myE.timrCap=9
   -- put e sprite...
   myE.sprite=48
   myE.tailSpr=49
@@ -265,8 +272,8 @@ end
 
 function make_m(x,y)
   myM = make_crawler(x,y)
-  myM.speed=.5
-  myM.timrCap=12
+  myM.speed=.65
+  myM.timrCap=7
   -- put e sprite...
   myM.sprite=48
   myM.tailSpr=49
@@ -275,7 +282,7 @@ end
 
 function make_h(x,y)
   myH = make_crawler(x,y)
-  myH.speed=1.02
+  myH.speed=.7
   myH.timrCap=7
   -- put e sprite...
   myH.sprite=48
@@ -321,6 +328,7 @@ function update_game()
   if(#bugs==0) then
     lvl.sb+=1
   end
+
   -- make a new crawler if reached frequency and meet other criteria
   if((spawner.crawlerFreq[pl.length+1] <= lvl.sc) and (spawner.crawlerSpawned[pl.length+1] > (#crawlers-1)))then
     lvl.sc=0
@@ -353,6 +361,7 @@ function update_game()
       crawlers[#crawlers].dx=-1
     end
   end
+
   -- make a new bug if reached frequency and meet other criteria
   if((spawner.bugFreq[pl.length+1]<=lvl.sb) and (spawner.bugSpawned[pl.length+1]>#bugs))then
     lvl.sb=0
@@ -362,6 +371,12 @@ function update_game()
     bugs[#bugs].dx=1
     bugs[#bugs].lifecyle=spawner.bugLife[pl.length+1]
     bugs[#bugs].deathPt=rndSpawns
+
+    if(spwnPoints[rndSpawns][1]==0)then
+      bugs[#bugs].dx=1
+    else
+      bugs[#bugs].dx=-1
+    end
   end
 
 end
@@ -381,6 +396,7 @@ function update_crawlers()
     change_dir(pl,0,1)
 	end
 
+-- update all crawler movements and mechanisms including player
   for a in all(crawlers) do
     a.timer+=1
 
@@ -394,7 +410,8 @@ function update_crawlers()
       end
     end
 
-    -- change the state of opponent crawlers if not colliding with player
+    -- change the state of opponent crawlers if not colliding with player and
+    -- handle nibbling and dying mechanisms
     if(a.pl==false)then
       -- if head collide and player is bigger than opponent
       if(coll(a,pl) and pl.length > a.length)then
@@ -410,6 +427,7 @@ function update_crawlers()
       if(coll(a,pl) and pl.length <= a.length)then
         menu_init()
       end
+
       -- tail nibbled off opponent
       eaten=false
       for tl=1,(#a.tail) do
@@ -420,6 +438,14 @@ function update_crawlers()
           eaten=true
           del(a.tail, a.tail[tl])
           a.length-=1
+        end
+        if(a.length==0)then
+          if(#a.tail!=0)then
+            for rem in all(a.tail) do
+              del(a.tail, rem)
+            end
+          end
+          break
         end
       end
       -- tail nibbled off player
@@ -433,8 +459,16 @@ function update_crawlers()
           del(pl.tail, pl.tail[tl])
           pl.length-=1
         end
+        if(pl.length==0)then
+          if(#pl.tail!=0)then
+            for rem in all(pl.tail) do
+              del(pl.tail, rem)
+            end
+          end
+          break
+        end
       end
-
+      eaten=false
 
       -- chase if tail longer than player
       if(a.length >= pl.length)then
@@ -444,14 +478,15 @@ function update_crawlers()
       elseif(dist(pl.x,a.x,pl.y,a.y)<80 and a.length < pl.length)then
         a.state=2
         --rest if its been in chase mode for > one minute
-      elseif(a.rest>1800 and a.state==3)then
-        if(a.rest>3150)then
-          r=0
+      elseif(a.rest>=a.restCap and a.state==3)then
+        if(a.rest>(a.restCap+a.restTot))then
+          a.rest=0
         end
+        a.rest+=1
         a.state=1
       end
 
-      -- bugging state if bug is close by to crawler and tail length meets
+      -- bugging state if bug is close to crawler and tail length meets
       -- shorter than criteria
       for e in all(bugs) do
         if(dist(e.x,a.x,e.y,a.y)<80 and a.length < pl.length)then
@@ -464,7 +499,6 @@ function update_crawlers()
 
     -- depending on the state of the opponent crawlers change the direction when
     -- colliding with wall or at a fork
-    -- CHANGE TRGMV DEPENDING ON TYPE OF CRAWLER
     if(a.pl==false and (atFork(a)==true or wallColl(a)==true))then
       --1=crawl/wander
       if(a.state==1)then
@@ -477,12 +511,26 @@ function update_crawlers()
 
         --3=chase
       elseif(a.state==3)then
-        trg_mv(a,pl.x,pl.y)
+        -- target the exact player coordinates
+        if(a.type=="hard")then
+          trg_mv(a,pl.x,pl.y)
+          -- target 4 tiles ahead of player for ambush effect
+        elseif(a.type=="medium")then
+          four=four_ahead(pl)
+          trg_mv(a,four[1],four[2])
+          -- target player only if dist between player and crawler > 50 pixels
+        elseif(a.type=="easy")then
+          if(dist(pl.x,a.x,pl.y,a.y)>50)then
+            trg_mv(a,pl.x,pl.y)
+          else
+            opp=opp_quad(pl)
+            trg_mv(a,opp[1],opp[2])
+          end
+        end
 
         --4=bugging
       elseif(a.state==4)then
         trg_mv(a,a.bugx,a.bugy)
-
       end
     end
 
@@ -490,12 +538,10 @@ function update_crawlers()
       -- if the bug gets eaten +1 tail node of the same sprite
       if(coll(a,b))then
         add(a.tail,tail_node(a,a.x,a.y,a.tailSpr))
-
         a.length+=1
         if(a.pl)then
-          pl.speed-=.01
+          pl.speed+=.01
         end
-
         -- check all the crawlers to make sure you delete and replace the
         -- coords for bugx and bugy
         for c in all(crawlers) do
@@ -505,10 +551,11 @@ function update_crawlers()
             c.bugy=0
           end
         end
-
         del(bugs,b)
       end
     end
+
+    -- 2DO ADD CODE FOR SLOWING DOWN IN TUNNELS
 
     -- if not colliding with wall update x and y accordingly)
     if(wallColl(a)==false)then
@@ -520,11 +567,12 @@ function update_crawlers()
      a.y=flr((a.y+4)/8)*8
     end
 
-    if(a.timer>=a.timrCap and a.length!=0) then
+-- code that moves tail of crawlers along with head
+    if(a.timer>=a.timrCap and a.length>0) then
       local mvTail={}
       add(mvTail,tail_node(a,a.x,a.y,a.tail[1].sprite))
       for tl=1,(#a.tail-1) do
-        add(mvTail, tail_node(a,a.tail[tl].x, a.tail[tl].y,a.tail[tl+1].sprite))
+        add(mvTail, tail_node(a,a.tail[tl].x, a.tail[tl].y, a.tail[tl+1].sprite))
       end
       a.tail=mvTail
       a.timer=0
@@ -659,6 +707,16 @@ function opp_quad(o)
   end
 end
 
+-- return a tile 4 positions ahead of the player
+function four_ahead(o)
+  local x=o.x
+  local y=o.y
+
+  x+=o.dx*o.speed*4
+  y+=o.dy*o.speed*4
+
+  return {x,y}
+end
 -- finds available directions
 function check_dir(o)
   local oTile=mget(flr(o.x)/8,flr((o.y)/8))
