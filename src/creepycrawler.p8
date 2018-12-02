@@ -98,6 +98,7 @@ function play_init()
 
  crawlers={}
  bugs={}
+
  levels={}
  currentLvl=1
  rndSpawns=1
@@ -106,25 +107,25 @@ function play_init()
  make_level(spwn1,1)
 
  spwn2=make_spawning_manager()
- spwn2.bugFreq={600,900,1200,1500,1800,2700,0,0,0}
- spwn2.bugLife={600,600,450,300,300,300,0,0,0}
+ spwn2.bugFreq={150,150,150,150,150,150,150,150,150,150}
+ spwn2.bugLife={600,600,450,300,300,300,300,300,300}
  spwn2.crawlerFreq={300,300,300,300,300,150,150,150,150}
  spwn2.crawlerLen={2,3,4,5,7,8,9,10,11}
- spwn2.crawlerSpawned={2,3,3,4,4,4,5,5,5}
+ spwn2.crawlerSpawned={2,2,2,2,2,2,2,2,2}
  spwn2.e={0.9,0.7,0.5,0.3,0.1,0,0,0,0}
  spwn2.m={0.1,0.3,0.5,0.7,0.9,0.9,0.7,0.5,0.3}
  spwn2.h={0,0,0,0,0,0.1,0.3,0.5,0.7}
  make_level(spwn2,2)
 
  spwn3=make_spawning_manager()
- spwn3.bugFreq={600,1200,1800,2700,3600,0,0,0,0}
- spwn3.bugLife={450,450,300,300,300,0,0,0,0}
+ spwn3.bugFreq={150,150,150,150,150,150,150,150,150,150}
+ spwn3.bugLife={450,450,300,300,300,300,300,300,300}
  spwn3.crawlerFreq={300,300,300,300,300,150,150,150,150}
  spwn3.crawlerLen={2,3,5,6,7,8,10,11,12}
- spwn3.crawlerSpawned={3,3,4,4,4,5,5,5,5}
+ spwn3.crawlerSpawned={2,2,2,2,2,2,2,2,2}
  spwn3.e={0.3,0.2,0.1,0,0,0,0,0,0}
- spwn3.m={0.7,0.8,0.7,0.5,0.3,0.1,0,0,0}
- spwn3.h={0,0,0.2,0.5,0.7,0.9,1,1,1}
+ spwn3.m={0.7,0.8,0.9,0.5,0.3,0.1,0,0,0}
+ spwn3.h={0,0,0,0.5,0.7,0.9,1,1,1}
  make_level(spwn3,3)
 
 
@@ -153,9 +154,9 @@ function play_draw()
 
 	draw_crawlers()
   draw_bugs()
-  if(#crawlers>1)then
-    print(crawlers[2].rest,pl.x-16,pl.y+24)
-  end
+  -- if(#crawlers>1)then
+    print(#bugs,pl.x-16,pl.y+24)
+  -- end
   print(pl.length,pl.x-16,pl.y+32)
   print(pl.x, pl.x-16,pl.y+8)
   print(pl.y, pl.x-16,pl.y+16)
@@ -177,7 +178,7 @@ function make_spawning_manager()
   local s={}
   -- s.bugFreq={300,450,600,750,900,1050,0,0,0}
   s.bugFreq={150,150,150,150,150,150,150,150,150,150}
-  s.bugLife={600,600,600,600,450,300,0,0,0}
+  s.bugLife={600,600,600,600,450,300,300,300,300}
   -- no more than this amount of bugs can exist on the map at a time
   s.bugSpawned={10,10,10,10,10,10,10,10,10,10}
 
@@ -243,7 +244,7 @@ function make_crawler(x,y)
 
   -- body
   c.tail={}
-  c.length=0
+    c.length=0
   c.maxLength=10
   c.tailSpr=33
 
@@ -295,7 +296,7 @@ function tail_node(a,x,y,sp)
   local t={}
   t.x=x
   t.y=y
-  t.node=a.length+1
+  -- t.node=a.length+1
   t.sprite=sp or 33
 
   -- add(a.tail,t)
@@ -321,6 +322,37 @@ function update_game()
   end
   cam.y+=(cam.toY-cam.y)*0.14
   camera(cam.x-63,cam.y-63)
+
+  if(pl.length >= 9) then
+    -- remove all crawlers and bugs from table
+    -- clean up player object, reset length, tail, speed(maybe), coords
+    -- change level
+
+    -- currBug = #bugs
+    -- for bu=1,currBug do
+    --   del(bugs, bugs[1])
+    -- end
+    bugs={}
+
+    currCrawl = (#crawlers - 1)
+    for cr=1,currCrawl do
+      del(crawlers, crawlers[2])
+    end
+
+    -- plTail = #pl.tail
+    pl.length=0
+    pl.x=104
+    pl.y=152
+    pl.tail={}
+    -- for ta in plTail do
+    --   del(pl.tail, pl.tail[1])
+    -- end
+
+    currentLvl+=1
+    if(currentLvl==4)then
+      end_init()
+    end
+  end
 
   -- code for spawning bugs and crawlers
   lvl=levels[currentLvl]
@@ -397,17 +429,39 @@ function update_crawlers()
     change_dir(pl,0,1)
 	end
 
--- update all crawler movements and mechanisms including player
+  -- update all crawler movements and mechanisms including player
   for a in all(crawlers) do
     a.timer+=1
 
     -- this is to make sure crawlers don't have a bug set as target when
     -- their lifecyle is over
-    if(#bugs==0)then
-      a.bugx=0
-      a.bugy=0
-      if(a.state==4)then
-        a.state=1
+    -- if(#bugs==0)then
+    --   a.bugx=0
+    --   a.bugy=0
+    --   if(a.state==4)then
+    --     a.state=1
+    --   end
+    -- end
+
+    for b in all(bugs) do
+      -- if the bug gets eaten +1 tail node of the same sprite
+      if(coll(a,b))then
+        add(a.tail,tail_node(a,a.x,a.y,a.tailSpr))
+        a.length+=1
+        if(a.pl)then
+          pl.speed+=.01
+        end
+        -- check all the crawlers to make sure you delete and replace the
+        -- coords for bugx and bugy
+        for c in all(crawlers) do
+          if(c.bugx==b.x and c.bugy==b.y)then
+            c.state=1
+            c.bugx=0
+            c.bugy=0
+          end
+        end
+
+        del(bugs,b)
       end
     end
 
@@ -419,7 +473,7 @@ function update_crawlers()
         add(pl.tail,tail_node(pl,pl.x,pl.y,a.tailSpr))
 
         pl.length+=1
-        pl.speed-=.01
+        pl.speed+=.01
 
         del(crawlers,a)
         break
@@ -431,13 +485,16 @@ function update_crawlers()
 
       -- tail nibbled off opponent
       eaten=false
-      for tl=1,(#a.tail) do
+      eatAt= 0
+      aLen= #a.tail
+      for tl=1,aLen do
         if(eaten)then
-          del(a.tail, a.tail[tl])
+          del(a.tail, a.tail[eatAt])
           a.length-=1
         elseif(coll(pl,a.tail[tl]))then
           eaten=true
-          del(a.tail, a.tail[tl])
+          eatAt=tl
+          del(a.tail, a.tail[eatAt])
           a.length-=1
         end
         if(a.length==0)then
@@ -451,13 +508,16 @@ function update_crawlers()
       end
       -- tail nibbled off player
       eaten=false
-      for tl=1,(#pl.tail) do
+      eatAt= 0
+      plLen= #pl.tail
+      for tl=1,plLen do
         if(eaten)then
-          del(pl.tail, pl.tail[tl])
+          del(pl.tail, pl.tail[eatAt])
           pl.length-=1
         elseif(coll(pl.tail[tl],a))then
           eaten=true
-          del(pl.tail, pl.tail[tl])
+          eatAt=tl
+          del(pl.tail, pl.tail[eatAt])
           pl.length-=1
         end
         if(pl.length==0)then
@@ -537,40 +597,25 @@ function update_crawlers()
       end
     end
 
-    for b in all(bugs) do
-      -- if the bug gets eaten +1 tail node of the same sprite
-      if(coll(a,b))then
-        add(a.tail,tail_node(a,a.x,a.y,a.tailSpr))
-        a.length+=1
-        if(a.pl)then
-          pl.speed+=.01
-        end
-        -- check all the crawlers to make sure you delete and replace the
-        -- coords for bugx and bugy
-        for c in all(crawlers) do
-          if(c.bugx==b.x and c.bugy==b.y)then
-            c.state=1
-            c.bugx=0
-            c.bugy=0
-          end
-        end
-        del(bugs,b)
-      end
-    end
 
     -- 2DO ADD CODE FOR SLOWING DOWN IN TUNNELS
 
-    -- if not colliding with wall update x and y accordingly)
-    if(wallColl(a)==false)then
-      a.x+=a.dx*a.speed
-      a.y+=a.dy*a.speed
-    -- if colliding with wall snap to grid
+    -- move crawler
+    if(a.pl) then
+      if(wallColl(a)==false)then
+        a.x+=a.dx*a.speed
+        a.y+=a.dy*a.speed
+      -- if colliding with wall snap to grid
+      else
+       a.x=flr((a.x+4)/8)*8
+       a.y=flr((a.y+4)/8)*8
+      end
     else
-     a.x=flr((a.x+4)/8)*8
-     a.y=flr((a.y+4)/8)*8
+        a.x+=a.dx*a.speed
+        a.y+=a.dy*a.speed
     end
 
--- code that moves tail of crawlers along with head
+    -- code that moves tail of crawlers along with head
     if(a.timer>=a.timrCap and a.length>0) then
       local mvTail={}
       add(mvTail,tail_node(a,a.x,a.y,a.tail[1].sprite))
@@ -596,7 +641,7 @@ end
 function update_bugs()
   for b in all(bugs) do
     -- if the bug lifecyle is up go back to a spawning point and die
-    if(b.lifecyle==0) then
+    if(b.lifecyle<=0) then
       b.state=3
       if(atSpawn(b))then
         del(bugs,b)
@@ -612,7 +657,7 @@ function update_bugs()
     if(dist(pl.x,b.x,pl.y,b.y)<80 and b.state!=3)then
       b.state=2
     -- wander
-    else
+    elseif(dist(pl.x,b.x,pl.y,b.y)>=80 and b.state!=3)then
       b.state=1
     end
 
@@ -632,6 +677,7 @@ function update_bugs()
         trg_mv(b,levels[currentLvl].spwnMgr.spawns[b.deathPt][1],levels[currentLvl].spwnMgr.spawns[b.deathPt][2])
       end
     end
+
     b.x+=b.dx*b.speed
     b.y+=b.dy*b.speed
 
@@ -651,7 +697,7 @@ end
 function rnd_mv(o)
     local dl=check_dir(o)
     if(#dl>0)then
-      change_dirA(o,dl[flr(rnd(#dl+1))])
+      change_dirA(o,dl[flr(rnd(#dl))])
     end
 end
 
@@ -720,22 +766,24 @@ function four_ahead(o)
 
   return {x,y}
 end
+
 -- finds available directions
 function check_dir(o)
-  local oTile=mget(flr(o.x)/8,flr((o.y)/8))
   local dir={}
   local b=(get_dir(o)+2)%4
+  -- left,down,right,up = 0,1,2,3
+  local currDir = get_dir(o)
 
-  if(wallColl(o,1,0)==false and b!=0)then
+  if(wallColl(o,1,0)==false and currDir!=0 and currDir!=2)then
     add(dir,0)
   end
-  if(wallColl(o,0,1)==false and b!=1)then
+  if(wallColl(o,0,1)==false and currDir!=1 and currDir!=3)then
     add(dir,1)
   end
-  if(wallColl(o,-1,0)==false and b!=2)then
+  if(wallColl(o,-1,0)==false and currDir!=2 and currDir!=0)then
     add(dir,2)
   end
-  if(wallColl(o,0,-1)==false and b!=3)then
+  if(wallColl(o,0,-1)==false and currDir!=3 and currDir!=1)then
     add(dir,3)
   end
 
@@ -743,7 +791,7 @@ function check_dir(o)
 end
 
 -- change the direction of actor o based on directions
--- right,down,left,up=1,2,3,4
+-- left,down,right,up= 1,2,3,4 || 0,1,2,3
 function change_dirA(o,d)
   if(d==0)then
     change_dir(o,1,0)
