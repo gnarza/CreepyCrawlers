@@ -4,7 +4,7 @@ In this game the idea is that food-stressed caterpillars resort to cannibalism. 
 
 ## Getting Started :floppy_disk:
 ---
-To play the game you can download the .html or look under the mygame.bin folder for your OS to get to version of this game and run the file.
+To play the game you can download the .html or look under the creepyCrawlers.bin folder for your OS to get to version of this game and run the file.
 
 If you would like to look at the code you may open the .p8 file and look through it, though the only way to test it yourself is to download the Pico-8 software and run/edit from there. (Link to Pico-8 down below)
 
