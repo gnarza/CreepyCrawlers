@@ -703,6 +703,9 @@ end
 -- randomly chooses an available direction
 function rnd_mv(o)
     local dl=check_dir(o)
+    if(#dl>0)then
+      change_dirA(o,dl[flr(rnd(#dl))])
+    end
     if(#dl>0) change_dirA(o,dl[flr(rnd(#dl))])
 end
 
