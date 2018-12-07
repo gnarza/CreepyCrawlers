@@ -1,0 +1,158 @@
+@startuml
+
+title Creepy Crawlers - Class Diagram
+'left to right direction'
+class Game {
+    _init()
+    _update()
+    _draw()
+}
+
+class SplashState {
+    splash_Init()
+    splash_Update()
+    splash_Draw()
+}
+
+class PlayState {
+    int currentLvl
+    array<Crawlers> crawlers
+    array<Bugs> bugs
+    array<Levels> level
+    int timer
+    int centerX
+    int centerY
+    
+    .. Cam Struct ..
+        int x
+        int y
+        int toX
+        int toY
+    ..
+    
+    play_Init()
+    play_Update()
+    play_Draw()
+
+    updateGame()
+    updateCrawlers()
+    updateBugs()
+
+    wallColl()
+    atFork()
+    atSpawn()
+    coll()
+
+    rndMv()
+    trgMv()
+
+    fourAhead()
+    oppQuad()
+    dist()
+    checkDir()
+    changeDirA()
+    changeDir()
+    getDir()
+    camPlayer()
+
+    drawCrawlers()
+    drawBugs()
+}
+
+class HomeState {
+    home_Init()
+    home_Update()
+    home_Draw()
+}
+
+class EndState {
+    end_Init()
+    end_Update()
+    end_Draw()
+}
+
+class Crawler << (S,#FF7700) Struct >> {
+    bool player
+    string type
+    int x
+    int y
+    int dx
+    int dy
+    int rest
+    int restCap
+    int retTot
+    int timer
+    int timrCap
+    int maxLenght
+    int length
+    float speed
+    int spriteHead
+    int spriteTail
+    array<tailNode> tail
+    int state
+    int bugX
+    int bugY
+
+}
+
+class TailNode << (S,#FF7700) Struct >> {
+    int x
+    int y
+    int sprite
+}
+
+class E_Crawler << (S,#FF7700) Struct >>
+class M_Crawler << (S,#FF7700) Struct >>
+class H_Crawler << (S,#FF7700) Struct >>
+
+class Bug << (S,#FF7700) Struct >> {
+    int x
+    int y
+    int dx
+    int dy
+    float speed
+    int deathPt
+    int sprite
+    int lifecyle
+    int state
+}
+
+class Level << (S,#FF7700) Struct >> {
+    int level
+    SpawningManager spwnMgr
+    int bugSpawnTimer
+    int crawlerSpawnTimer
+}
+
+class SpawningManager << (S,#FF7700) Struct >> {
+    array<int> bugFreq
+    array<int> bugSpawned
+    array<int> crawlerFreq
+    array<int> crawlerLength
+    array<int> crawlerSpawned
+    array<float> easyProb
+    array<float> mediumProb
+    array<float> hardProb
+}
+
+hide E_Crawler members
+hide M_Crawler members
+hide H_Crawler members
+
+Game -up-> SplashState
+Game --> PlayState
+Game -up-> HomeState
+Game -up-> EndState
+
+Crawler <|-- E_Crawler
+Crawler <|-- M_Crawler
+Crawler <|-- H_Crawler
+
+Crawler -left- TailNode
+
+PlayState -left- Crawler
+PlayState -right- Bug
+PlayState -up- Level
+
+Level -left- SpawningManager
+@enduml

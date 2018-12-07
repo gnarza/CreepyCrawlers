@@ -4,10 +4,10 @@
 left to right direction
 
 (*) --> "Crawl"
-"Crawl" --> [See/hear predators] "Evade" 
+"Crawl" --> [Player nearby] "Evade" 
 "Crawl" --> [Eaten or life timed out\nand crawled back into edge] (*)
 
-"Evade" --> [Predators timed out of memory] "Crawl"
+"Evade" --> [Player no longer nearby] "Crawl"
 "Evade" --> [Eaten or life timed out\nand crawled back into edge] (*)
 
 @enduml
